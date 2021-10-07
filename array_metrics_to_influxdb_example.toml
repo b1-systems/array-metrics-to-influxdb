@@ -1,0 +1,73 @@
+# The TOML syntax is documented here: https://toml.io/en/
+# In contrast to regular INI files string values MUST be quoted
+
+# InfluxDB settings such as access and (optional) a custom retention policy
+[influxdb]
+host="my_influx_host"
+# the user does only require write privileges, no queries are performed
+user="my_influx_user"
+password="my_influx_password"
+database="my_influx_database"
+
+# Optional: Existing retention policy to use for all writes, can be overwritten
+# via command line argument
+#retention_policy=
+
+# Optional: String to prepend to any `measurement` value
+#measurement_prefix= # e.g. "pure."
+
+# You can configure the resolution of every collector individually
+# Has to be a valid value according to the metrics documentation, use
+# `array-metrics-to-influxdb-collectors` to access it
+# Invalid values will lead to error messages with the message 'Invalid
+# resolution'
+[collector.arrays_performance]
+# TOML allows you to insert thousand separators to enhance readability
+resolution = 30_000
+
+# Every `[[array]]` entry configures the access to one FlashArray. Most of the
+# values can be found inside the PureStorage web UI at 'Settings'->'Access' or
+# are already necessary to create a new API client (such as
+# 'private_key_file').
+# - Every "host" and (non-empty) "name" value has to be unique since it is used
+#   as `host`-tag inside InfluxDB
+# - You can either enter the path to the private key or embed it inside this
+#   configuration, see second example below
+# - A single entry can be disabled by adding `disable=true`
+# - Use the `array-metrics-to-influxdb-collectors` command to obtain a list of
+#   valid collectors
+[[array]]
+host="array_host1"
+private_key_file="path_to_private_key(.pem)"
+private_key_password="..."
+user="..."
+client_id="..."
+key_id="..."
+issuer="..."
+# if non-empty: Used as "host"-tag (inside InfluxDB) instead of the value of "host"
+name="special_name"
+# defaults to 60 seconds
+metrics_interval=30
+# use the `array-metrics-to-influxdb-collectors` command to obtain a list of
+# valid collectors
+# if no list is passed all collectors are active
+#collectors = ['volume_performance']
+#disable=true
+
+[[array]]
+host="array_host2"
+private_key="""
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: DES-EDE3-CBC,027C99B252E9DFA3
+
+AafpHInIqb6NL9+VFR4JzTjvHm7VtzYF5cGsK9DqavZszLX3JQCwnwon0/JGB09B
+...
+-----END RSA PRIVATE KEY-----
+"""
+private_key_password="..."
+user="..."
+client_id="..."
+key_id="..."
+issuer="..."
+disable=true

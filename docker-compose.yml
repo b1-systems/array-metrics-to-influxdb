@@ -1,0 +1,19 @@
+---
+version: "3"
+services:
+  influxdb:
+    image: influxdb:1.8
+    ports:
+      - "8086:8086"
+    environment:
+      INFLUXDB_DB: "flasharray_metrics"
+      INFLUXDB_HTTP_AUTH_ENABLED: "true"
+      INFLUXDB_WRITE_USER: "flasharray_metrics"
+      INFLUXDB_WRITE_USER_PASSWORD: "flash4all!"
+      INFLUXDB_ADMIN_USER: "admin"
+      INFLUXDB_ADMIN_PASSWORD: "secret"
+      INFLUXDB_REPORTING_DISABLED: "true"
+  grafana:
+    image: grafana/grafana:8.1.0
+    ports:
+      - "3000:3000"

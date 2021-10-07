@@ -1,0 +1,25 @@
+---
+fail_fast: true
+repos:
+  # required linters/fixers are already part of poetry dev-setup
+  - repo: local
+    hooks:
+      - id: format
+        name: Code formatting check
+        entry: poetry run make format-check
+        pass_filenames: false
+        language: system
+        files: '^(src|bin)/.+\.py$'
+
+      - id: lint
+        name: Code(spell) linting
+        entry: poetry run make lint
+        pass_filenames: false
+        language: system
+
+      - id: mypy
+        name: Static Type Checker
+        entry: poetry run make mypy
+        pass_filenames: false
+        language: system
+        files: '^(src/.+\.py)|(poetry.lock)|(pyproject.toml)$'
