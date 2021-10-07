@@ -3,7 +3,7 @@
 This program is mainly a wrapper around the
 [`py-pure-client`](https://pure-storage-py-pure-client.readthedocs-hosted.com)
 and [`influxdb-python`](https://influxdb-python.readthedocs.io) with the goal of
-transferring any number of metrics from from one or more Pure products to an
+transferring any number of metrics from one or more Pure products to an
 InfluxDB. Right now only FlashArray products are supported but other ones such
 as Pure1 and FlashBlade should not pose any problem since they are already
 supported by the client.
