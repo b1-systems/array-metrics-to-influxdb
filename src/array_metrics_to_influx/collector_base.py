@@ -4,6 +4,7 @@
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
+from itertools import chain
 from time import time
 from typing import ClassVar, Final, Iterator, Optional, Type, Union
 
@@ -34,6 +35,8 @@ METRIC_RESOLUTION_TO_RETENTION_TIME = {
 }
 
 COLLECTORS_BY_MEASUREMENT_NAME: Final[dict[str, Type["BaseCollector"]]] = {}
+
+VOLUME_AND_GROUPS_QUERY_LIMIT: Final[int] = 500
 
 
 class BaseCollector(ABC):
@@ -83,11 +86,13 @@ class BaseCollector(ABC):
 
     @abstractmethod
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         ...
 
-    def influx_data(self, start_time: int) -> Iterator[InfluxDataPoint]:
+    def influx_data(
+        self, start_time: int, ids: Optional[list[str]] = None
+    ) -> Iterator[InfluxDataPoint]:
         start_time_delta = timedelta(milliseconds=int(time() * 1000) - start_time)
         min_resolution = self.min_resolution
         for resolution, retention_time in METRIC_RESOLUTION_TO_RETENTION_TIME.items():
@@ -108,10 +113,41 @@ class BaseCollector(ABC):
         assert (
             min_resolution
         ), "minimal resolution cannot be None, are 100 years not enough?"
-        response = self.get_response(start_time=start_time, resolution=min_resolution)
-        if isinstance(response, ErrorResponse):
-            raise PureErrorResponse(response)
-        return self.response_to_influx_data(response)
+        if not ids:
+            response = self.get_response(
+                start_time=start_time, resolution=min_resolution
+            )
+            if isinstance(response, ErrorResponse):
+                raise PureErrorResponse(response)
+            return self.response_to_influx_data(response)
+        else:
+            # fmt: off
+            id_batches = [
+                ids[i * VOLUME_AND_GROUPS_QUERY_LIMIT:
+                    (i + 1) * VOLUME_AND_GROUPS_QUERY_LIMIT
+                    ]
+                for i in range(len(ids) // VOLUME_AND_GROUPS_QUERY_LIMIT + 1)
+            ]
+            # fmt: on
+            point_iterators = []
+            for counter, id_batch in enumerate(id_batches, 1):
+                self.logger.debug(
+                    "Processing metric in batches",
+                    batch=f"{counter}/{len(id_batches)}",
+                    total_ids=len(ids),
+                    resolution=min_resolution,
+                    start_time_delta=str(start_time_delta),
+                )
+                # skip empty batches
+                if not id_batch:
+                    continue
+                response = self.get_response(
+                    start_time=start_time, resolution=min_resolution, ids=id_batch
+                )
+                if isinstance(response, ErrorResponse):
+                    raise PureErrorResponse(response)
+                point_iterators.append(self.response_to_influx_data(response))
+            return chain(*point_iterators)
 
     def response_to_influx_data(
         self, response: Union[ErrorResponse, ValidResponse]
@@ -189,3 +225,16 @@ class SpaceCollectorMixin:
         28_800_000,
         86_400_000,
     )
+
+
+# The API does not allow collectors to query historical data for more than 500
+# volumes or volume groups so we need to batch the call sizes
+# Collectors querying data from volumes or volume groups will need to inherit from one of the following MixIns
+
+
+class VolumeGroupCollectorMark:
+    pass
+
+
+class VolumeCollectorMark:
+    pass

@@ -50,6 +50,7 @@ helper program.
 ```shell
 usage: array-metrics-to-influxdb [-h] [-s | -d] [-c CONFIG] [-v] [-j]
                                  [-r RETENTION_POLICY] [-i INITIAL_START_TIME]
+                                 [-m MASTER_DATA_COLLECTION_INTERVAL]
 
 Retrieve selected metrics from one or multiple Pure FlashArray instances and
 write them to a InfluxDB. Different collectors are responsible for different
@@ -86,6 +87,13 @@ optional arguments:
                         on the requested range the used resolution for the
                         data might have to be increased. This happens
                         dynamically if necessary. (default: None)
+  -m MASTER_DATA_COLLECTION_INTERVAL, --main-data-collection-interval MASTER_DATA_COLLECTION_INTERVAL
+                        Due to a limit of 500 volumes or volume groups which
+                        can be queried at once we need to collect the IDs of
+                        all volume (groups) periodically. This settings allows
+                        setting the amount of *minutes* between each
+                        collection round. Overrides the value from the config
+                        file for all arrays. (default: None)
 
 v1.0.0, GPLv3 @ B1 Systems GmbH <info@b1-systems.de>
 ```

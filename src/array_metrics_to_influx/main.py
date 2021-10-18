@@ -11,7 +11,7 @@ different 'measurement' fields.
 
 import logging
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import getenv, path
 from pathlib import Path
 from queue import Queue
@@ -28,7 +28,11 @@ from requests.exceptions import ConnectionError
 from tomli import loads
 
 from array_metrics_to_influx import __author__, __license__, __version__
-from array_metrics_to_influx.collector_base import COLLECTORS_BY_MEASUREMENT_NAME
+from array_metrics_to_influx.collector_base import (
+    COLLECTORS_BY_MEASUREMENT_NAME,
+    VolumeCollectorMark,
+    VolumeGroupCollectorMark,
+)
 from array_metrics_to_influx.config import CollectorConfig, Config, FlasharrayConfig
 from array_metrics_to_influx.errors import PureErrorResponse
 from array_metrics_to_influx.influx import (
@@ -37,7 +41,11 @@ from array_metrics_to_influx.influx import (
     create_influxdb_client,
     influxdb_writer,
 )
-from array_metrics_to_influx.pure import create_flasharray_client
+from array_metrics_to_influx.pure import (
+    create_flasharray_client,
+    get_volume_group_ids,
+    get_volume_ids,
+)
 
 # Once set to true the program will send the remaining points to the InfluxDB
 # and exit afterwards
@@ -62,6 +70,7 @@ class CommandLineArguments(TypedDict):
     json_log: bool
     retention_policy: Optional[str]
     initial_start_time: Optional[int]
+    main_data_collection_interval: Optional[int]
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -129,12 +138,23 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="""Datetime to use for the first collection round. Defaults to one
         interval before the current time. Can be specified as UNIX timestamp in
         *milliseconds* or as ISO-8601 formatted string, e.g.
-        2021-08-01[T00[:05[:23[.541[000]]]]] Should not be older than one year which is the
-        maximum retention policy of pure product's performance metrics. Might
-        be helpful if this application crashed and you want to collect the
-        missing data from the downtime. Depending on the requested range the
-        used resolution for the data might have to be increased. This happens
-        dynamically if necessary.""",
+        2021-08-01[T00[:05[:23[.541[000]]]]] Should not be older than one year
+        which is the maximum retention policy of pure product's performance
+        metrics. Might be helpful if this application crashed and you want to
+        collect the missing data from the downtime. Depending on the requested
+        range the used resolution for the data might have to be increased. This
+        happens dynamically if necessary.""",
+    )
+    parser.add_argument(
+        "-m",
+        "--main-data-collection-interval",
+        type=int,
+        default=None,
+        help="""Due to a limit of 500 volumes or volume groups which can be
+        queried at once we need to collect the IDs of all volume (groups)
+        periodically. This settings allows setting the amount of *minutes*
+        between each collection round. Overrides the value from the config file
+        for all arrays.""",
     )
 
     args = cast(CommandLineArguments, vars(parser.parse_args(argv)))
@@ -251,6 +271,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                 flasharray_config,
                 data_points_queue,
                 config.collector,
+                args["main_data_collection_interval"]
+                or flasharray_config.main_data_collection_interval,
             ),
             kwargs=dict(initial_start_time=args["initial_start_time"]),
         )
@@ -264,6 +286,7 @@ def collect_thread(
     config: FlasharrayConfig,
     queue: InfluxDataQueue,
     collectors_config: dict[str, CollectorConfig],
+    main_data_collection_interval_minutes: int,
     *,
     initial_start_time: Optional[int],
 ) -> None:
@@ -279,6 +302,13 @@ def collect_thread(
     logger.info(
         "Created FlasharrayClient", rest_api_version=fa_client.get_rest_version()
     )
+    main_data_collection_ts = datetime.fromtimestamp(0)
+    main_data_collection_interval = timedelta(
+        minutes=main_data_collection_interval_minutes
+    )
+
+    volume_ids = []
+    volume_group_ids = []
 
     collectors = []
     for measurement in config.collectors:
@@ -297,9 +327,32 @@ def collect_thread(
     while not SHOULD_STOP:
         start_time_ms = int(time() * 1000)
         logger = logger.bind(start_time=end_time_ms)
+        # let's check whether we have to recollect all volume (group) ids
+        if main_data_collection_ts + main_data_collection_interval < datetime.now():
+            volume_ids = get_volume_ids(fa_client)
+            volume_group_ids = get_volume_group_ids(fa_client)
+            logger.info(
+                "Refreshed main data",
+                volume_ids=len(volume_ids),
+                volume_group_ids=len(volume_group_ids),
+            )
         for collector in collectors:
             try:
-                influx_data_points = list(collector.influx_data(start_time=end_time_ms))
+                if isinstance(collector, VolumeCollectorMark):
+                    influx_data_points = list(
+                        collector.influx_data(start_time=end_time_ms, ids=volume_ids)
+                    )
+                elif isinstance(collector, VolumeGroupCollectorMark):
+                    influx_data_points = list(
+                        collector.influx_data(
+                            start_time=end_time_ms, ids=volume_group_ids
+                        )
+                    )
+                else:
+                    influx_data_points = list(
+                        collector.influx_data(start_time=end_time_ms)
+                    )
+
                 logger.debug(
                     "Collected data points",
                     measurement=collector.measurement,
@@ -311,6 +364,7 @@ def collect_thread(
                     "collector_exception",
                     errors=exc.response.errors,
                     response_headers=exc.response.headers,
+                    measurement=collector.measurement,
                 )
                 continue
             except Exception:

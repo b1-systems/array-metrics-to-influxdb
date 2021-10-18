@@ -51,3 +51,11 @@ def create_flasharray_client(config: FlasharrayConfig) -> FlasharrayClient:
                 issuer=config.issuer,
             )
     return client
+
+
+def get_volume_ids(client: FlasharrayClient) -> list[str]:
+    return [item.id for item in client.get_volumes().items if not item.destroyed]
+
+
+def get_volume_group_ids(client: FlasharrayClient) -> list[str]:
+    return [item.id for item in client.get_volume_groups().items if not item.destroyed]

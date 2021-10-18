@@ -5,9 +5,8 @@
 from collections import defaultdict
 from typing import Any, Iterable, Optional
 
-from pydantic import Field, FilePath, SecretStr, root_validator, validator
+from pydantic import Field, FilePath, PositiveInt, SecretStr, root_validator, validator
 from pydantic.main import BaseModel
-from pydantic.types import PositiveInt
 
 from array_metrics_to_influx.collector_base import COLLECTORS_BY_MEASUREMENT_NAME
 
@@ -22,6 +21,10 @@ class CollectorConfig(BaseModel):
     # positive
     resolution: PositiveInt
 
+    class Config:
+        allow_mutation = False
+        extra = "forbid"
+
 
 class InfluxDBConfig(BaseModel):
     host: str
@@ -32,6 +35,10 @@ class InfluxDBConfig(BaseModel):
     port: int = 8086
     retention_policy: Optional[str] = None
     measurement_prefix: Optional[str] = None
+
+    class Config:
+        allow_mutation = False
+        extra = "forbid"
 
 
 def assert_existing_collectors(collectors: Iterable[str]) -> None:
@@ -57,7 +64,8 @@ class FlasharrayConfig(BaseModel):
     key_id: str
     issuer: str
     name: Optional[str] = None
-    metrics_interval: int = Field(30, ge=30)
+    main_data_collection_interval: PositiveInt = 60
+    metrics_interval: int = Field(60, ge=30)
     disable: bool = False
     collectors: list[str] = Field(sorted(COLLECTORS_BY_MEASUREMENT_NAME), min_items=1)
 
@@ -73,6 +81,10 @@ class FlasharrayConfig(BaseModel):
         ), "You have to provide either `private_key` or `private_key_file`"
         return values
 
+    class Config:
+        allow_mutation = False
+        extra = "forbid"
+
 
 class Config(BaseModel):
     influxdb: InfluxDBConfig
@@ -81,6 +93,7 @@ class Config(BaseModel):
 
     class Config:
         allow_mutation = False
+        extra = "forbid"
 
     @validator("array")
     def check_unique_host_and_name(

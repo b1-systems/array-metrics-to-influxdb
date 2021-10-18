@@ -40,6 +40,7 @@ resolution = 30_000
 host="array_host1"
 private_key_file="path_to_private_key(.pem)"
 private_key_password="..."
+# Not the name of the API Client but the username of an existing user
 user="..."
 client_id="..."
 key_id="..."
@@ -53,6 +54,10 @@ metrics_interval=30
 # if no list is passed all collectors are active
 #collectors = ['volume_performance']
 #disable=true
+
+# See `array-metrics-to-influx -h` for an explanation
+# defaults to 60 minutes
+#main_data_collection_interval = 120
 
 [[array]]
 host="array_host2"

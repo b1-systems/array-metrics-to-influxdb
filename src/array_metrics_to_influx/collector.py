@@ -18,7 +18,7 @@ allow easy substitution to create clickable links.
 # author:    Tilman Lüttje <luettje@b1-systems.de>
 
 from time import time
-from typing import Iterator, Union
+from typing import Iterator, Optional, Union
 
 from pypureclient.responses import ErrorResponse, ValidResponse
 
@@ -27,6 +27,8 @@ from array_metrics_to_influx.collector_base import (
     BaseCollector,
     PerformanceCollectorMixin,
     SpaceCollectorMixin,
+    VolumeCollectorMark,
+    VolumeGroupCollectorMark,
 )
 from array_metrics_to_influx.influx import InfluxDataPoint
 
@@ -55,7 +57,7 @@ class ArraysPerformance(
     )
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         return self.fa_client.get_arrays_performance(
             start_time=start_time, resolution=resolution
@@ -63,7 +65,10 @@ class ArraysPerformance(
 
 
 class VolumesPerformance(
-    BaseCollector, PerformanceCollectorMixin, measurement="volumes_performance"
+    BaseCollector,
+    PerformanceCollectorMixin,
+    VolumeCollectorMark,
+    measurement="volumes_performance",
 ):
     """
     Real-time latency data, and average I/O sizes for each volume and as a
@@ -75,16 +80,17 @@ class VolumesPerformance(
     """
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         return self.fa_client.get_volumes_performance(
-            start_time=start_time, resolution=resolution
+            start_time=start_time, resolution=resolution, ids=ids, destroyed=False
         )
 
 
 class VolumeGroupsPerformance(
     BaseCollector,
     PerformanceCollectorMixin,
+    VolumeGroupCollectorMark,
     measurement="volume_groups_performance",
 ):
     """
@@ -97,10 +103,10 @@ class VolumeGroupsPerformance(
     """
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         return self.fa_client.get_volume_groups_performance(
-            start_time=start_time, resolution=resolution
+            start_time=start_time, resolution=resolution, ids=ids, destroyed=False
         )
 
 
@@ -118,7 +124,7 @@ class NetworkInterfacesPerformance(
     """
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         return self.fa_client.get_network_interfaces_performance(
             start_time=start_time, resolution=resolution
@@ -158,7 +164,7 @@ class HostsPerformance(
     """
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         # function does not take a `start_time` or `resolution` parameter
         return self.fa_client.get_hosts_performance()
@@ -174,7 +180,9 @@ class HostsPerformance(
         )
 
 
-class VolumesSpace(BaseCollector, SpaceCollectorMixin, measurement="volumes_space"):
+class VolumesSpace(
+    BaseCollector, SpaceCollectorMixin, VolumeCollectorMark, measurement="volumes_space"
+):
     """
     Provisioned (virtual) size and physical storage consumption data for each volume.
 
@@ -184,10 +192,10 @@ class VolumesSpace(BaseCollector, SpaceCollectorMixin, measurement="volumes_spac
     """
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         return self.fa_client.get_volumes_space(
-            start_time=start_time, resolution=resolution
+            start_time=start_time, resolution=resolution, ids=ids, destroyed=False
         )
 
     def response_to_influx_data(
@@ -210,7 +218,7 @@ class Controllers(BaseCollector, measurement="controllers"):
     RESOLUTIONS = (None,)
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         # neither `start_time` nor `resolution` makes any sense since we're not
         # requesting any historical data
@@ -244,7 +252,7 @@ class PodsPerformanceReplicationByArray(
     """
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         # Another quirk, the function does not return any data if any
         # `start_time` is passed
@@ -292,7 +300,7 @@ class ArraysSpace(BaseCollector, SpaceCollectorMixin, measurement="arrays_space"
     """
 
     def get_response(
-        self, *, start_time: int, resolution: int
+        self, *, start_time: int, resolution: int, ids: Optional[list[str]] = None
     ) -> Union[ErrorResponse, ValidResponse]:
         return self.fa_client.get_arrays_space(
             start_time=start_time, resolution=resolution
