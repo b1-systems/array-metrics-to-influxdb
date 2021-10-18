@@ -29,6 +29,7 @@ def create_influxdb_client(config: InfluxDBConfig) -> InfluxDBClient:
     return InfluxDBClient(
         host=config.host,
         port=config.port,
+        ssl=config.ssl,
         username=config.user,
         password=config.password.get_secret_value(),
         database=config.database,

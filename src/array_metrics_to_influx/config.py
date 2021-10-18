@@ -26,6 +26,7 @@ class CollectorConfig(BaseModel):
 class InfluxDBConfig(BaseModel):
     host: str
     user: str
+    ssl: bool = False
     password: SecretStr
     database: str
     port: int = 8086
