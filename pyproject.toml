@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "array-metrics-to-influx"
-version = "1.1.0"
+version = "1.1.1"
 description = "Read performance metrics from a Pure FlashArray and write them to an InfluxDB."
 authors = ["Tilman Lüttje <luettje@b1-systems.de>"]
 license = "GPLv3"
