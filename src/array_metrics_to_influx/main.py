@@ -327,8 +327,9 @@ def collect_thread(
     while not SHOULD_STOP:
         start_time_ms = int(time() * 1000)
         logger = logger.bind(start_time=end_time_ms)
+        now = datetime.now()
         # let's check whether we have to recollect all volume (group) ids
-        if main_data_collection_ts + main_data_collection_interval < datetime.now():
+        if main_data_collection_ts + main_data_collection_interval < now:
             volume_ids = get_volume_ids(fa_client)
             volume_group_ids = get_volume_group_ids(fa_client)
             logger.info(
@@ -336,6 +337,7 @@ def collect_thread(
                 volume_ids=len(volume_ids),
                 volume_group_ids=len(volume_group_ids),
             )
+            main_data_collection_ts = now
         for collector in collectors:
             try:
                 if isinstance(collector, VolumeCollectorMark):
