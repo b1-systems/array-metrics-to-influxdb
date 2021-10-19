@@ -95,7 +95,7 @@ optional arguments:
                         collection round. Overrides the value from the config
                         file for all arrays. (default: None)
 
-v1.0.0, GPLv3 @ B1 Systems GmbH <info@b1-systems.de>
+v1.1.1, GPLv3 @ B1 Systems GmbH <info@b1-systems.de>
 ```
 
 If you're using the (self-build) container image you should mount the
@@ -128,7 +128,7 @@ optional arguments:
                         documentation link will point to it, for example `-a
                         192.168.150.160`
 
-v1.0.0, GPLv3 @ B1 Systems GmbH <info@b1-systems.de>
+v1.1.1, GPLv3 @ B1 Systems GmbH <info@b1-systems.de>
 ```
 
 ## Configuration
