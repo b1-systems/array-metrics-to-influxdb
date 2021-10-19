@@ -16,6 +16,9 @@ database="my_influx_database"
 # Optional: String to prepend to any `measurement` value
 #measurement_prefix= # e.g. "pure."
 
+# Optional: Use a SSL connection to InfluxDB
+#ssl=true
+
 # You can configure the resolution of every collector individually
 # Has to be a valid value according to the metrics documentation, use
 # `array-metrics-to-influxdb-collectors` to access it
