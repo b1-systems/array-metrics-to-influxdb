@@ -19,6 +19,9 @@ database="my_influx_database"
 # Optional: Use a SSL connection to InfluxDB
 #ssl=true
 
+# Optional: Maximum number of points to send per write request
+#batch_size=...
+
 # You can configure the resolution of every collector individually
 # Has to be a valid value according to the metrics documentation, use
 # `array-metrics-to-influxdb-collectors` to access it

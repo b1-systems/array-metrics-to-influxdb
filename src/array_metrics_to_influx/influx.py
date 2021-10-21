@@ -42,7 +42,6 @@ class WriterThreadSignal(Enum):
     """
 
     STOP = auto()
-    DUMP_QUEUE_SIZE = auto()
 
 
 InfluxDataQueue = Queue[Union[list[InfluxDataPoint], WriterThreadSignal]]
@@ -54,6 +53,7 @@ def influxdb_writer(
     *,
     retention_policy: Optional[str] = None,
     measurement_prefix: Optional[str] = None,
+    batch_size: Optional[int] = None,
 ) -> None:
     """
     Intended to be used as thread target to offload writing/sending the data
@@ -64,7 +64,7 @@ def influxdb_writer(
     Communication such as the message to finish up is also done via the same
     queue.
     """
-    logger = getLogger(thread="influxdb_writer")
+    logger = getLogger(thread="influxdb_writer", batch_size=batch_size or "unlimited")
     logger.info("InfluxDB write thread started")
     measurement_prefix = measurement_prefix or ""
     while True:
@@ -74,11 +74,6 @@ def influxdb_writer(
                 logger.info("STOP signal received, stopping thread now.")
                 queue.task_done()
                 break
-            elif item == WriterThreadSignal.DUMP_QUEUE_SIZE:
-                logger.info(
-                    "DUMP_QUEUE_SIZE signal received.", approx_queue_size=queue.qsize()
-                )
-                queue.task_done()
         elif not item:
             # list of data points might be empty if the collection interval is
             # set to a low value
@@ -95,6 +90,7 @@ def influxdb_writer(
                     item,
                     time_precision="ms",
                     retention_policy=retention_policy,
+                    batch_size=batch_size,
                 )
             # for now every item for which one of the exceptions below occurs
             # is lost

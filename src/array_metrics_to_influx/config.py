@@ -5,8 +5,15 @@
 from collections import defaultdict
 from typing import Any, Iterable, Optional
 
-from pydantic import Field, FilePath, PositiveInt, SecretStr, root_validator, validator
-from pydantic.main import BaseModel
+from pydantic import (
+    BaseModel,
+    Field,
+    FilePath,
+    PositiveInt,
+    SecretStr,
+    root_validator,
+    validator,
+)
 
 from array_metrics_to_influx.collector_base import COLLECTORS_BY_MEASUREMENT_NAME
 
@@ -35,6 +42,7 @@ class InfluxDBConfig(BaseModel):
     port: int = 8086
     retention_policy: Optional[str] = None
     measurement_prefix: Optional[str] = None
+    batch_size: Optional[PositiveInt] = None
 
     class Config:
         allow_mutation = False

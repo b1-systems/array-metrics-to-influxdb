@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from os import getenv, path
 from pathlib import Path
 from queue import Queue
-from signal import SIGINT, SIGTERM, signal, strsignal
+from signal import SIGINT, SIGTERM, SIGUSR1, signal, strsignal
 from sys import exit, stderr
 from threading import Thread
 from time import sleep, time
@@ -71,6 +71,7 @@ class CommandLineArguments(TypedDict):
     retention_policy: Optional[str]
     initial_start_time: Optional[int]
     main_data_collection_interval: Optional[int]
+    influxdb_batch_size: Optional[int]
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -156,6 +157,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         between each collection round. Overrides the value from the config file
         for all arrays.""",
     )
+    parser.add_argument(
+        "-b",
+        "--influxdb-batch-size",
+        type=int,
+        default=None,
+        help="""Maximum number of points to send in one write request.
+        Recommended for large data transfers, if e.g. historical data are
+        imported via `-i`. Overrides the value from the config file.""",
+    )
 
     args = cast(CommandLineArguments, vars(parser.parse_args(argv)))
 
@@ -220,6 +230,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             retention_policy=args["retention_policy"]
             or config.influxdb.retention_policy,
             measurement_prefix=config.influxdb.measurement_prefix,
+            batch_size=args["influxdb_batch_size"] or config.influxdb.batch_size,
         ),
     )
     influxdb_writer_thread.start()
@@ -256,8 +267,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             logger.info("Waiting for InfluxDBWriter thread to stop.")
             influxdb_writer_thread.join()
 
+    # inner function allows easy access to our queue object
+    def diagnostics_handler(signum: int, _: Optional[FrameType]) -> None:
+        logger.info("Received signal", signal=strsignal(signum))
+        logger.info("Diagnostics", points_packages_in_queue=data_points_queue.qsize())
+
     signal(SIGTERM, exit_handler)
     signal(SIGINT, exit_handler)
+    signal(SIGUSR1, diagnostics_handler)
 
     for flasharray_config in config.array:
         host_tag = flasharray_config.name or flasharray_config.host

@@ -51,6 +51,7 @@ helper program.
 usage: array-metrics-to-influxdb [-h] [-s | -d] [-c CONFIG] [-v] [-j]
                                  [-r RETENTION_POLICY] [-i INITIAL_START_TIME]
                                  [-m MAIN_DATA_COLLECTION_INTERVAL]
+                                 [-b INFLUXDB_BATCH_SIZE]
 
 Retrieve selected metrics from one or multiple Pure FlashArray instances and
 write them to a InfluxDB. Different collectors are responsible for different
@@ -94,6 +95,11 @@ optional arguments:
                         setting the amount of *minutes* between each
                         collection round. Overrides the value from the config
                         file for all arrays. (default: None)
+  -b INFLUXDB_BATCH_SIZE, --influxdb-batch-size INFLUXDB_BATCH_SIZE
+                        Maximum number of points to send in one write request.
+                        Recommended for large data transfers, if e.g.
+                        historical data are imported via `-i`. Overrides the
+                        value from the config file. (default: None)
 
 v1.1.1, GPLv3 @ B1 Systems GmbH <info@b1-systems.de>
 ```
@@ -154,6 +160,15 @@ To make sure that one slow product, e.g. FlashArray, does not slow down the
 whole application multiple threads are used. One thread per product is
 responsible for retrieving the data and one thread is responsible for sending
 the data to an InfluxDB. Communication happens via a queue.
+
+## InfluxDB `batch_size`/Diagnostics
+
+If you have a lot of volumes or volumes group you should definitely set a value
+for setting, especially when you're importing historical data via `-i`. InfluxDB
+might refuse your write request if it contains too many points. But you also
+have to choose a number large enough to not be a bottleneck for data transfer.
+To show the current number of packages of points, **not individual points**,
+waiting to be transferred send `SIGUSR1` to the running process.
 
 ## Development Setup
 
