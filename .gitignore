@@ -140,7 +140,8 @@ cython_debug/
 *.access_token
 
 # Config with passwords
-config.toml
+config.toml*
+*.pem
 
 # Reports
 junit/
