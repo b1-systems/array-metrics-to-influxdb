@@ -41,7 +41,7 @@ class InfluxDBConfig(BaseModel):
     database: str
     port: int = 8086
     retention_policy: Optional[str] = None
-    measurement_prefix: Optional[str] = None
+    measurement_prefix: str = ""
     batch_size: Optional[PositiveInt] = None
 
     class Config:

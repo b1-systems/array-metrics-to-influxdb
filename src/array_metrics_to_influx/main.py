@@ -229,7 +229,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         kwargs=dict(
             retention_policy=args["retention_policy"]
             or config.influxdb.retention_policy,
-            measurement_prefix=config.influxdb.measurement_prefix,
             batch_size=args["influxdb_batch_size"] or config.influxdb.batch_size,
         ),
     )
@@ -291,7 +290,10 @@ def main(argv: Optional[list[str]] = None) -> int:
                 args["main_data_collection_interval"]
                 or flasharray_config.main_data_collection_interval,
             ),
-            kwargs=dict(initial_start_time=args["initial_start_time"]),
+            kwargs=dict(
+                initial_start_time=args["initial_start_time"],
+                measurement_prefix=config.influxdb.measurement_prefix,
+            ),
         )
         t.start()
         collector_threads.append(t)
@@ -305,6 +307,7 @@ def collect_thread(
     collectors_config: dict[str, CollectorConfig],
     main_data_collection_interval_minutes: int,
     *,
+    measurement_prefix: str = "",
     initial_start_time: Optional[int],
 ) -> None:
     """Continuously collects the configured metrics from a FlashArray and puts
@@ -336,6 +339,7 @@ def collect_thread(
             host_tag=host_tag,
             fa_client=fa_client,
             min_resolution=resolution,
+            measurement_prefix=measurement_prefix,
         )
         collectors.append(collector)
 

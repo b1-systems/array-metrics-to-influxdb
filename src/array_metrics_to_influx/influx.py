@@ -52,7 +52,6 @@ def influxdb_writer(
     queue: InfluxDataQueue,
     *,
     retention_policy: Optional[str] = None,
-    measurement_prefix: Optional[str] = None,
     batch_size: Optional[int] = None,
 ) -> None:
     """
@@ -66,7 +65,6 @@ def influxdb_writer(
     """
     logger = getLogger(thread="influxdb_writer", batch_size=batch_size or "unlimited")
     logger.info("InfluxDB write thread started")
-    measurement_prefix = measurement_prefix or ""
     while True:
         item = queue.get()
         if isinstance(item, WriterThreadSignal):
